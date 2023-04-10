@@ -1,5 +1,4 @@
-﻿using Entities.Entities;
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
 
 namespace Business.Abstract
 {
@@ -9,7 +8,6 @@ namespace Business.Abstract
         Task AddAsync(string currency, XDocument document);
 
         Task UpdateAsync(string currency, XDocument document);
-
 
         Task GetExchangeRateFromTCMB(string path);
     }

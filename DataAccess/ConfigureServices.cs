@@ -11,19 +11,24 @@ namespace DataAccess
     {
         public static IServiceCollection AddDataAccessServices(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddDbContext<ExchangeDbContext>(options => options.UseFirebird(configuration.GetConnectionString("FirstConnectionString")), ServiceLifetime.Singleton);
-            services.AddDbContext<FirstDbContext>(options => options.UseFirebird(configuration.GetConnectionString("FirstConnectionString")), ServiceLifetime.Singleton);
-            services.AddDbContext<SecondDbContext>(options => options.UseFirebird(configuration.GetConnectionString("SecondConnectionString")), ServiceLifetime.Singleton);
-            services.AddDbContext<ThirdDbContext>(options => options.UseFirebird(configuration.GetConnectionString("ThirdConnectionString")), ServiceLifetime.Singleton);
-            services.AddDbContext<FourthDbContext>(options => options.UseFirebird(configuration.GetConnectionString("FourthConnectionString")), ServiceLifetime.Singleton);
-            services.AddDbContext<FifthDbContext>(options => options.UseFirebird(configuration.GetConnectionString("FifthConnectionString")), ServiceLifetime.Singleton);
-        
+
+            services.AddDbContext<FirstDbContext>(options => options.UseFirebird(configuration.GetConnectionString("FirstConnectionString")));
+            services.AddDbContext<SecondDbContext>(options => options.UseFirebird(configuration.GetConnectionString("SecondConnectionString")));
+            services.AddDbContext<ThirdDbContext>(options => options.UseFirebird(configuration.GetConnectionString("ThirdConnectionString")));
+            services.AddDbContext<FourthDbContext>(options => options.UseFirebird(configuration.GetConnectionString("FourthConnectionString")));
+            services.AddDbContext<FifthDbContext>(options => options.UseFirebird(configuration.GetConnectionString("FifthConnectionString")));
+
             services.AddTransient<IFirstExchangeRateRepository, FirstExchangeRateRepository>();
+            services.AddTransient<IFirstExchangeRepository, FirstExchangeRepository>();
             services.AddTransient<ISecondExchangeRateRepository, SecondExchangeRateRepository>();
+            services.AddTransient<ISecondExchangeRepository, SecondExchangeRepository>();
             services.AddTransient<IThirdExchangeRateRepository, ThirdExchangeRateRepository>();
+            services.AddTransient<IThirdExchangeRepository, ThirdExchangeRepository>();
             services.AddTransient<IFourthExchangeRateRepository, FourthExchangeRateRepository>();
+            services.AddTransient<IFourthExchangeRepository, FourthExchangeRepository>();
             services.AddTransient<IFifthExchangeRateRepository, FifthExchangeRateRepository>();
-            services.AddTransient<IExchangeRepository, ExchangeRepository>();
+            services.AddTransient<IFifthExchangeRepository, FifthExchangeRepository>();
+     
             return services;
         }
     }

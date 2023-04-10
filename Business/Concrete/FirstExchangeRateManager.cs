@@ -1,7 +1,7 @@
 ﻿using Business.Abstract;
 using DataAccess.Repositories.Abstract;
 using Entities.Entities;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using System.Xml.Linq;
 
 namespace Business.Concrete
@@ -9,31 +9,53 @@ namespace Business.Concrete
     public class FirstExchangeRateManager : IFirstExchangeRateService
     {
 
+        private readonly ILogger<FirstExchangeRateManager> _logger;
         private readonly HttpClient _httpClient;
         private readonly IFirstExchangeRateRepository _firstExchangeRateRepository;
-        private readonly IExchangeRepository _exchangeRepository;
+        private readonly IFirstExchangeRepository _firstExchangeRepository;
         private readonly DateTime date = DateTime.Now.Date;
         private string currencyCode;
         private decimal forexBuying, forexSelling, banknoteBuying, banknoteSelling;
 
 
-        public FirstExchangeRateManager(HttpClient httpClient, IFirstExchangeRateRepository firstExchangeRateRepository, IExchangeRepository exchangeRepository)
+        public FirstExchangeRateManager(HttpClient httpClient, IFirstExchangeRateRepository firstExchangeRateRepository, IFirstExchangeRepository exchangeRepository, ILogger<FirstExchangeRateManager> logger)
         {
             _httpClient = httpClient;
             _firstExchangeRateRepository = firstExchangeRateRepository;
-            _exchangeRepository = exchangeRepository;
-
+            _firstExchangeRepository = exchangeRepository;
+            _logger = logger;
         }
 
         public async Task GetExchangeRateFromTCMB(string path)
         {
+         
+
             try
             {
                 var response = await _httpClient.GetAsync(path);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Web Sitesi Bağlantısı Başarılı. Status Code {StatusCode}",response.StatusCode);
+                }
+                else
+                {
+                    _logger.LogInformation("Web Sitesi Bağlantısı Başarısız. Status Code {StatusCode}", response.StatusCode);
+                }
+
                 response.EnsureSuccessStatusCode();
                 var content = await response.Content.ReadAsStringAsync();
                 var document = XDocument.Parse(content);
-                List<Exchange> exchange = await _exchangeRepository.GetAllAsync();
+                List<Exchange> exchange = await _firstExchangeRepository.GetAllAsync();
+
+                if (exchange.Count > 0)
+                {
+                    _logger.LogInformation("1.Database de Toplam "+exchange.Count+" Adet Döviz Cinsi Bulundu");
+                }
+                else
+                {
+                    _logger.LogInformation("1.Databe Döviz Tablosunda Kayıt Yok");
+                }
+
 
                 foreach (var currency in exchange)
                 {
@@ -43,10 +65,10 @@ namespace Business.Concrete
 
                     if (countExchangeRateByDate.Count() > 0)
                     {
+
                         switch (currency.DovizId)
                         {
                             case "TL":
-                                Console.WriteLine("Türk Lirası Kayıtlı Fiyat Kontrolü Yapılmayacak");
                                 break;
                             case "EURO":
                                 currencyCode = "EUR";
@@ -58,7 +80,6 @@ namespace Business.Concrete
 
                                 break;
                         }
-                        Console.WriteLine(currency.DovizId + "datası var");
                     }
                     else
                     {
@@ -78,13 +99,11 @@ namespace Business.Concrete
                     }
                 }
 
-                Console.WriteLine(path);
-                Console.WriteLine("Kayıt Tamamlandı");
             }
             catch (Exception ex)
             {
 
-                Console.WriteLine(ex.Message);
+                _logger.LogError(ex.Message);
             }
 
         }
@@ -143,7 +162,7 @@ namespace Business.Concrete
                     KullaniciId = 1
                 });
 
-                Console.WriteLine(currencyCode + "eklendi");
+                _logger.LogInformation("1.Database " + currencyCode+ " Kuru Eklendi.Alış Fiyatı ="+ forexBuying +" Satış Fiyatı ="+ forexSelling);
 
             }
         }
@@ -151,7 +170,7 @@ namespace Business.Concrete
         public async Task UpdateAsync(string currency, XDocument document)
         {
             currencyCode = currency is "EUR" ? "EURO" : currency;
-             ExchangeRate exchangeRate = await _firstExchangeRateRepository.GetAsync(p => p.Tarih == date && p.DovizId == currencyCode);
+            ExchangeRate exchangeRate = await _firstExchangeRateRepository.GetAsync(p => p.Tarih == date && p.DovizId == currencyCode);
             var node = document.Descendants("Currency").FirstOrDefault(x => x.Attribute("CurrencyCode").Value == currency);
             forexBuying = decimal.Parse(node.Element("ForexBuying").Value.Replace(".", ","));
             forexSelling = decimal.Parse(node.Element("ForexSelling").Value.Replace(".", ","));
@@ -162,40 +181,42 @@ namespace Business.Concrete
 
             if (exchangeRate is null)
             {
-                Console.WriteLine("Devam Et");
-            }
-            else { 
-
-            Console.WriteLine(currencyCode + "Veritabanı Kur=" + exchangeRate.AlisFiati + "Kur Fiyatı= " + forexBuying);
-
-         
-
-            if (exchangeRate.AlisFiati != forexBuying || exchangeRate.SatisFiati != forexSelling)
-            {
-               await _firstExchangeRateRepository.RemoveAsync(exchangeRate);
-               await  _firstExchangeRateRepository.AddAsync(new ExchangeRate()
-                {
-                    DovizId = currencyCode,
-                    Tarih = DateTime.Now.Date,
-                    AlisFiati = forexBuying,
-                    SatisFiati = forexSelling,
-                    EfektifAlisFiati = banknoteBuying,
-                    EfektifSatisFiati = banknoteSelling,
-                    SerbestAlisFiati = 0,
-                    SerbestSatisFiati = 0,
-                    DegisimTarihi = DateTime.Now,
-                    InsertTarihi = DateTime.Now,
-                    InsertKullaniciId = 1,
-                    KullaniciId = 1
-                });
+                _logger.LogInformation("1.Database "+currencyCode+" Kuruna Ait Kayıt Yok");
             }
             else
             {
-                Console.WriteLine("Fiyatlar aynı sorun yok ");
-            }
+             
+                if (exchangeRate.AlisFiati != forexBuying || exchangeRate.SatisFiati != forexSelling)
+                {
+                    _logger.LogInformation("1.Database " + currencyCode + " Kurunda Farklılık Var Sistemde Olan Alış Fiyatı = "+ exchangeRate.AlisFiati +" Gerçek Alış Kur Fiyatı = "+ forexBuying+ " Sistemde Olan Satış Fiyatı = " + exchangeRate.SatisFiati + " Gerçek Satış Kur Fiyatı = " + forexSelling );
+
+                    await _firstExchangeRateRepository.DeleteAsync(exchangeRate);
+                   
+                    await _firstExchangeRateRepository.AddAsync(new ExchangeRate()
+                    {
+                        DovizId = exchangeRate.DovizId,
+                        Tarih = exchangeRate.Tarih,
+                        AlisFiati = forexBuying,
+                        SatisFiati = forexSelling,
+                        EfektifAlisFiati = exchangeRate.EfektifAlisFiati,
+                        EfektifSatisFiati = exchangeRate.EfektifSatisFiati,
+                        SerbestAlisFiati = exchangeRate.SerbestAlisFiati,
+                        SerbestSatisFiati = exchangeRate.SerbestSatisFiati,
+                        DegisimTarihi = DateTime.Now,
+                        InsertTarihi = DateTime.Now,
+                        InsertKullaniciId = 1,
+                        KullaniciId = 1
+                    });
+
+                    _logger.LogInformation("1.Database " + currencyCode + " Kuru Düzeltildi");
+                }
+                else
+                {
+                    _logger.LogInformation("1.Database " + currencyCode + " Kur Fiyatında Farklılık Yok");
+                }
 
             }
-        }      
-  
+        }
+
     }
 }

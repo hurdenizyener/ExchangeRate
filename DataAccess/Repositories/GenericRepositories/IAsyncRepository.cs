@@ -8,6 +8,6 @@ namespace DataAccess.Repositories.GenericRepositories
         Task<List<T>> GetAllAsync(Expression<Func<T, bool>> predicate = null);
         Task<T> GetAsync(Expression<Func<T, bool>> predicate);
         Task<T> AddAsync(T entity);
-        Task<T> RemoveAsync(T entity);
+        Task<T> DeleteAsync(T entity);
     }
 }

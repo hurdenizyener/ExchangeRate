@@ -8,8 +8,13 @@ namespace DataAccess.Configurations
     {
         public void Configure(EntityTypeBuilder<Exchange> builder)
         {
-            builder.ToTable("DOVIZ").HasKey(p => p.DovizId);
-            builder.Property(p => p.DovizId).HasColumnName("DOVIZID");
+            builder
+                .ToTable("DOVIZ")
+                .HasKey(p => p.DovizId);
+
+            builder
+                .Property(p => p.DovizId)
+                .HasColumnName("DOVIZID");
 
         }
     }

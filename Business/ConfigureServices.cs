@@ -1,6 +1,5 @@
 ﻿using Business.Abstract;
 using Business.Concrete;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Business
@@ -15,8 +14,6 @@ namespace Business
             services.AddTransient<IFourthExchangeRateService, FourthExchangeRateManager>();
             services.AddTransient<IFifthExchangeRateService, FifthExchangeRateManager>();
   
-
-
             return services;
         }
     }
