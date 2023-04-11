@@ -20,6 +20,12 @@ namespace ServiceUI
             _logger = logger;
         }
 
+        public override Task StartAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Hizmet Başlatıldı.");
+            return base.StartAsync(cancellationToken);
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             int test = _configuration.GetValue<int>("Test");
@@ -29,9 +35,15 @@ namespace ServiceUI
             TimeSpan startTime = _configuration.GetValue<TimeSpan>("ClockSettings:StartTime");
             TimeSpan endTime = _configuration.GetValue<TimeSpan>("ClockSettings:EndTime");
             var time = 0;
-        
 
-            _logger.LogInformation("Hizmet "+startTime+" - "+endTime+"Saatleri Arasında Çalışacak");
+
+            _logger.LogInformation($"Hizmet {startTime} - {endTime} Saatleri Arasında Çalışacak");
+            _logger.LogInformation($"Hizmet {timeRange} Saatte 1 Defa İşlem Yapacak");
+
+            try
+            {
+
+          
 
             switch (timeRange)
             {
@@ -103,16 +115,13 @@ namespace ServiceUI
                             default:
                                 await firstExchangeRateService.GetExchangeRateFromTCMB(path);
                                 break;
-
-
-
                         }
 
                         switch (test)
                         {
                             case 0:
                                 await Task.Delay(20000, stoppingToken);
-                                _logger.LogInformation("Hizmet Test Modunda Çalıştırıldı 20 Saniyede Bir Çalışacak");
+                                _logger.LogInformation("Hizmet Test Modunda Çalıştırıldı 20 Saniyede Bir Çalışacaktır");
                                 break;
                             case 1:
                                 await Task.Delay(time, stoppingToken);
@@ -124,25 +133,22 @@ namespace ServiceUI
                         }
                        
                     }
-                    else
-                    {
-                        _logger.LogInformation("Hizmet Şuan Kapalı " + startTime + " - " + endTime + "Saatleri Arasında Çalışacak");
-                        await Task.Delay(3600000, stoppingToken);
-                    }
-
-
-
                 }
+            }
+
+            }
+            catch (Exception ex)
+            {
+
+                _logger.LogInformation(ex , ex.Message);
             }
         }
 
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-
+            _logger.LogInformation("Hizmet Kapatıldı.");
             return base.StopAsync(cancellationToken);
         }
-
-
 
     }
 }

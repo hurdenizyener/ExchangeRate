@@ -28,8 +28,6 @@ namespace Business.Concrete
 
         public async Task GetExchangeRateFromTCMB(string path)
         {
-         
-
             try
             {
                 var response = await _httpClient.GetAsync(path);
@@ -49,11 +47,16 @@ namespace Business.Concrete
 
                 if (exchange.Count > 0)
                 {
-                    _logger.LogInformation("1.Database de Toplam "+exchange.Count+" Adet Döviz Cinsi Bulundu");
+                   
+                    _logger.LogInformation($"1.Database de Toplam {exchange.Count} Adet Döviz Cinsi Bulundu");
+                    foreach (var item in exchange)
+                    {
+                        _logger.LogInformation($"Doviz Cinsi: {item.DovizId}");
+                    }
                 }
                 else
                 {
-                    _logger.LogInformation("1.Databe Döviz Tablosunda Kayıt Yok");
+                    _logger.LogInformation("1.Databese Döviz Tablosunda Kayıt Yok");
                 }
 
 
@@ -68,6 +71,7 @@ namespace Business.Concrete
 
                         switch (currency.DovizId)
                         {
+                             
                             case "TL":
                                 break;
                             case "EURO":
@@ -136,15 +140,12 @@ namespace Business.Concrete
                 var node = document.Descendants("Currency").FirstOrDefault(x => x.Attribute("CurrencyCode").Value == currency);
                 forexBuying = decimal.Parse(node.Element("ForexBuying").Value.Replace(".", ","));
                 forexSelling = decimal.Parse(node.Element("ForexSelling").Value.Replace(".", ","));
-                var denem = node.Element("BanknoteBuying").Value;
-                banknoteBuying = denem is "" ? 0 : decimal.Parse(node.Element("BanknoteBuying").Value.Replace(".", ","));
-                var denem2 = node.Element("BanknoteSelling").Value;
-                banknoteSelling = denem2 is "" ? 0 : decimal.Parse(node.Element("BanknoteSelling").Value.Replace(".", ","));
-
+                var banknoteBuyingControl = node.Element("BanknoteBuying").Value;
+                banknoteBuying = banknoteBuyingControl is "" ? 0 : decimal.Parse(node.Element("BanknoteBuying").Value.Replace(".", ","));
+                var banknoteSellingControl = node.Element("BanknoteSelling").Value;
+                banknoteSelling = banknoteSellingControl is "" ? 0 : decimal.Parse(node.Element("BanknoteSelling").Value.Replace(".", ","));
 
                 currencyCode = currency is "EUR" ? "EURO" : currency;
-
-
 
                 await _firstExchangeRateRepository.AddAsync(new ExchangeRate()
                 {
@@ -162,7 +163,7 @@ namespace Business.Concrete
                     KullaniciId = 1
                 });
 
-                _logger.LogInformation("1.Database " + currencyCode+ " Kuru Eklendi.Alış Fiyatı ="+ forexBuying +" Satış Fiyatı ="+ forexSelling);
+                _logger.LogInformation($"1.Database {currencyCode} Kuru Eklendi. Alış Fiyatı: {forexBuying} , Satış Fiyatı: {forexSelling}");
 
             }
         }
@@ -170,25 +171,28 @@ namespace Business.Concrete
         public async Task UpdateAsync(string currency, XDocument document)
         {
             currencyCode = currency is "EUR" ? "EURO" : currency;
+
+            _logger.LogInformation($"1.Databese {currencyCode} Döviz Kontrolü Yapılıyor.");
+
             ExchangeRate exchangeRate = await _firstExchangeRateRepository.GetAsync(p => p.Tarih == date && p.DovizId == currencyCode);
             var node = document.Descendants("Currency").FirstOrDefault(x => x.Attribute("CurrencyCode").Value == currency);
             forexBuying = decimal.Parse(node.Element("ForexBuying").Value.Replace(".", ","));
             forexSelling = decimal.Parse(node.Element("ForexSelling").Value.Replace(".", ","));
-            var denem = node.Element("BanknoteBuying").Value;
-            banknoteBuying = denem is "" ? 0 : decimal.Parse(node.Element("BanknoteBuying").Value.Replace(".", ","));
-            var denem2 = node.Element("BanknoteSelling").Value;
-            banknoteSelling = denem2 is "" ? 0 : decimal.Parse(node.Element("BanknoteSelling").Value.Replace(".", ","));
+            var banknoteBuyingControl = node.Element("BanknoteBuying").Value;
+            banknoteBuying = banknoteBuyingControl is "" ? 0 : decimal.Parse(node.Element("BanknoteBuying").Value.Replace(".", ","));
+            var banknoteSellingControl = node.Element("BanknoteSelling").Value;
+            banknoteSelling = banknoteSellingControl is "" ? 0 : decimal.Parse(node.Element("BanknoteSelling").Value.Replace(".", ","));
 
             if (exchangeRate is null)
             {
-                _logger.LogInformation("1.Database "+currencyCode+" Kuruna Ait Kayıt Yok");
+                _logger.LogInformation($"1.Database {currencyCode} Kuruna Ait Kayıt Yok");
             }
             else
             {
              
                 if (exchangeRate.AlisFiati != forexBuying || exchangeRate.SatisFiati != forexSelling)
                 {
-                    _logger.LogInformation("1.Database " + currencyCode + " Kurunda Farklılık Var Sistemde Olan Alış Fiyatı = "+ exchangeRate.AlisFiati +" Gerçek Alış Kur Fiyatı = "+ forexBuying+ " Sistemde Olan Satış Fiyatı = " + exchangeRate.SatisFiati + " Gerçek Satış Kur Fiyatı = " + forexSelling );
+                    _logger.LogInformation($"1.Database {currencyCode} Kurunda Farklılık Var. Sistemde Olan Kur Alış Fiyatı: {exchangeRate.AlisFiati} - Gerçek Alış Kur Fiyatı: {forexBuying} / Sistemde Olan Kur Satış Fiyatı: {exchangeRate.SatisFiati} - Gerçek Satış Kur Fiyatı: {forexSelling}");
 
                     await _firstExchangeRateRepository.DeleteAsync(exchangeRate);
                    
@@ -208,11 +212,11 @@ namespace Business.Concrete
                         KullaniciId = 1
                     });
 
-                    _logger.LogInformation("1.Database " + currencyCode + " Kuru Düzeltildi");
+                    _logger.LogInformation($"1.Database {currencyCode} Kuru Düzeltildi");
                 }
                 else
                 {
-                    _logger.LogInformation("1.Database " + currencyCode + " Kur Fiyatında Farklılık Yok");
+                    _logger.LogInformation($"1.Database {currencyCode} Kur Fiyatında Farklılık Yok");
                 }
 
             }

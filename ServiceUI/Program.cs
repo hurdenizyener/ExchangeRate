@@ -5,49 +5,36 @@ using Serilog;
 using Serilog.Events;
 
 
-public class Program
-{
-    public static void Main(string[] args)
+IHost host = Host.CreateDefaultBuilder(args)
+    .UseWindowsService()
+    .ConfigureServices((hostContext, services) =>
     {
-        Log.Logger = new LoggerConfiguration()
-        .MinimumLevel.Debug()
-        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-        .Enrich.FromLogContext()
-        .WriteTo.File(@"C:\Logs\EgemenKurLogs\Log.txt", rollingInterval: RollingInterval.Day)
-        .CreateLogger();
+        IConfiguration configuration = hostContext.Configuration;
+        services.AddHttpClient();
+        services.AddHostedService<ExchangeRateService>();
+        services.AddDataAccessServices(configuration);
+        services.AddBusinessServices();
+    })
+ .UseSerilog()
+ .Build();
 
-        try
-        {
-            Log.Information("Hizmet Baþlatýldý.");
-            CreateHostBuilder(args).Build().Run();
-            return;
-        }
-        catch (Exception ex)
-        {
-            Log.Fatal(ex, "Hizmeti Baþlatýrken Bir Sorun Oluþtu.");
-            return;
-        }
-        finally
-        {
-            Log.CloseAndFlush();
-        }
-    }
+var configsetting = new ConfigurationBuilder().
+       AddJsonFile("appsettings.json").Build();
 
-    public static IHostBuilder CreateHostBuilder(string[] args)
-    {
-        return Host.CreateDefaultBuilder(args)
-            .UseWindowsService()
-            .ConfigureServices((hostContext, services) =>
-            {
-                IConfiguration configuration = hostContext.Configuration;
-                services.AddHttpClient();
-                services.AddHostedService<ExchangeRateService>();
-                services.AddDataAccessServices(configuration);
-                services.AddBusinessServices();
-            })
-         .UseSerilog();
-    }
-}
+Log.Logger = new LoggerConfiguration()
+.MinimumLevel.Debug()
+.MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+.Enrich.FromLogContext()
+.WriteTo.File(configsetting["Logging:Logpath"], rollingInterval: RollingInterval.Day)
+.CreateLogger();
+
+
+
+
+host.Run ();
+
+
+
 
 
 

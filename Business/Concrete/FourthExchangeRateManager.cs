@@ -1,13 +1,14 @@
 ﻿using Business.Abstract;
 using DataAccess.Repositories.Abstract;
 using Entities.Entities;
+using Microsoft.Extensions.Logging;
 using System.Xml.Linq;
 
 namespace Business.Concrete
 {
     public class FourthExchangeRateManager : IFourthExchangeRateService
     {
-
+        private readonly ILogger<FourthExchangeRateManager> _logger;
         private readonly HttpClient _httpClient;
         private readonly IFourthExchangeRateRepository _fourthExchangeRateRepository;
         private readonly IFourthExchangeRepository _fourthExchangeRepository;
@@ -15,11 +16,12 @@ namespace Business.Concrete
         private string currencyCode;
         private decimal forexBuying, forexSelling, banknoteBuying, banknoteSelling;
 
-        public FourthExchangeRateManager(HttpClient httpClient, IFourthExchangeRateRepository fourthExchangeRateRepository, IFourthExchangeRepository fourthExchangeRepository)
+        public FourthExchangeRateManager(HttpClient httpClient, IFourthExchangeRateRepository fourthExchangeRateRepository, IFourthExchangeRepository fourthExchangeRepository, ILogger<FourthExchangeRateManager> logger)
         {
             _httpClient = httpClient;
             _fourthExchangeRateRepository = fourthExchangeRateRepository;
             _fourthExchangeRepository = fourthExchangeRepository;
+            _logger = logger;
         }
 
         public async Task GetExchangeRateFromTCMB(string path)
@@ -27,31 +29,49 @@ namespace Business.Concrete
             try
             {
                 var response = await _httpClient.GetAsync(path);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Web Sitesi Bağlantısı Başarılı. Status Code {StatusCode}", response.StatusCode);
+                }
+                else
+                {
+                    _logger.LogInformation("Web Sitesi Bağlantısı Başarısız. Status Code {StatusCode}", response.StatusCode);
+                }
+
                 response.EnsureSuccessStatusCode();
                 var content = await response.Content.ReadAsStringAsync();
                 var document = XDocument.Parse(content);
                 List<Exchange> exchange = await _fourthExchangeRepository.GetAllAsync();
+
+                if (exchange.Count > 0)
+                {
+                    _logger.LogInformation($"4.Database de Toplam {exchange.Count} Adet Döviz Cinsi Bulundu");
+                    foreach (var item in exchange)
+                    {
+                        _logger.LogInformation($"Doviz Cinsi: {item.DovizId}");
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("4.Databese Döviz Tablosunda Kayıt Yok");
+                }
+
                 foreach (var currency in exchange)
                 {
-
                     var countExchangeRateByDate = await _fourthExchangeRateRepository.GetAllAsync(p => p.Tarih == date && p.DovizId == currency.DovizId);
-
 
                     if (countExchangeRateByDate.Count() > 0)
                     {
                         switch (currency.DovizId)
                         {
                             case "TL":
-                                Console.WriteLine("Türk Lirası Kayıtlı Fiyat Kontrolü Yapılmayacak");
                                 break;
                             case "EURO":
                                 currencyCode = "EUR";
                                 await UpdateAsync(currencyCode, document);
-
                                 break;
                             default:
                                 await UpdateAsync(currency.DovizId, document);
-
                                 break;
                         }
                     }
@@ -77,7 +97,7 @@ namespace Business.Concrete
             catch (Exception ex)
             {
 
-                Console.WriteLine(ex.Message);
+                _logger.LogError(ex.Message);
             }
 
         }
@@ -86,7 +106,6 @@ namespace Business.Concrete
         {
             if (currency is "TL")
             {
-
                 await _fourthExchangeRateRepository.AddAsync(new ExchangeRate()
                 {
                     DovizId = currency,
@@ -105,17 +124,15 @@ namespace Business.Concrete
             }
             else
             {
-
                 var node = document.Descendants("Currency").FirstOrDefault(x => x.Attribute("CurrencyCode").Value == currency);
                 forexBuying = decimal.Parse(node.Element("ForexBuying").Value.Replace(".", ","));
                 forexSelling = decimal.Parse(node.Element("ForexSelling").Value.Replace(".", ","));
-                var denem = node.Element("BanknoteBuying").Value;
-                banknoteBuying = denem is "" ? 0 : decimal.Parse(node.Element("BanknoteBuying").Value.Replace(".", ","));
-                var denem2 = node.Element("BanknoteSelling").Value;
-                banknoteSelling = denem2 is "" ? 0 : decimal.Parse(node.Element("BanknoteSelling").Value.Replace(".", ","));
+                var banknoteBuyingControl = node.Element("BanknoteBuying").Value;
+                banknoteBuying = banknoteBuyingControl is "" ? 0 : decimal.Parse(node.Element("BanknoteBuying").Value.Replace(".", ","));
+                var banknoteSellingControl = node.Element("BanknoteSelling").Value;
+                banknoteSelling = banknoteSellingControl is "" ? 0 : decimal.Parse(node.Element("BanknoteSelling").Value.Replace(".", ","));
+
                 currencyCode = currency is "EUR" ? "EURO" : currency;
-
-
 
                 await _fourthExchangeRateRepository.AddAsync(new ExchangeRate()
                 {
@@ -133,7 +150,7 @@ namespace Business.Concrete
                     KullaniciId = 1
                 });
 
-                Console.WriteLine(currencyCode + "eklendi");
+                _logger.LogInformation($"4.Database {currencyCode} Kuru Eklendi. Alış Fiyatı: {forexBuying} , Satış Fiyatı: {forexSelling}");
 
             }
         }
@@ -141,31 +158,31 @@ namespace Business.Concrete
         public async Task UpdateAsync(string currency, XDocument document)
         {
             currencyCode = currency is "EUR" ? "EURO" : currency;
+
+
+            _logger.LogInformation($"4.Databese {currencyCode} Döviz Kontrolü Yapılıyor.");
+
             ExchangeRate exchangeRate = await _fourthExchangeRateRepository.GetAsync(p => p.Tarih == date && p.DovizId == currencyCode);
             var node = document.Descendants("Currency").FirstOrDefault(x => x.Attribute("CurrencyCode").Value == currency);
             forexBuying = decimal.Parse(node.Element("ForexBuying").Value.Replace(".", ","));
             forexSelling = decimal.Parse(node.Element("ForexSelling").Value.Replace(".", ","));
-            var denem = node.Element("BanknoteBuying").Value;
-            banknoteBuying = denem is "" ? 0 : decimal.Parse(node.Element("BanknoteBuying").Value.Replace(".", ","));
-            var denem2 = node.Element("BanknoteSelling").Value;
-            banknoteSelling = denem2 is "" ? 0 : decimal.Parse(node.Element("BanknoteSelling").Value.Replace(".", ","));
+            var banknoteBuyingControl = node.Element("BanknoteBuying").Value;
+            banknoteBuying = banknoteBuyingControl is "" ? 0 : decimal.Parse(node.Element("BanknoteBuying").Value.Replace(".", ","));
+            var banknoteSellingControl = node.Element("BanknoteSelling").Value;
+            banknoteSelling = banknoteSellingControl is "" ? 0 : decimal.Parse(node.Element("BanknoteSelling").Value.Replace(".", ","));
 
             if (exchangeRate is null)
             {
-                Console.WriteLine("Bu Kura Ait Kayıt Yok");
+                _logger.LogInformation($"4.Database {currencyCode} Kuruna Ait Kayıt Yok");
             }
             else
             {
-
-                Console.WriteLine("Kod= " + currencyCode + "Veritabanı Kur= " + exchangeRate.AlisFiati + "Kur Fiyatı= " + forexBuying);
-
-
+                _logger.LogInformation($"4.Database {currencyCode} Kurunda Farklılık Var. Sistemde Olan Kur Alış Fiyatı: {exchangeRate.AlisFiati} - Gerçek Alış Kur Fiyatı: {forexBuying} / Sistemde Olan Kur Satış Fiyatı: {exchangeRate.SatisFiati} - Gerçek Satış Kur Fiyatı: {forexSelling}");
 
                 if (exchangeRate.AlisFiati != forexBuying || exchangeRate.SatisFiati != forexSelling)
                 {
-                    Console.WriteLine("Fiyatta Farklılık Var");
                     await _fourthExchangeRateRepository.DeleteAsync(exchangeRate);
-                    Console.WriteLine("Farklı Olan Kur Silindi");
+
                     await _fourthExchangeRateRepository.AddAsync(new ExchangeRate()
                     {
                         DovizId = exchangeRate.DovizId,
@@ -182,11 +199,11 @@ namespace Business.Concrete
                         KullaniciId = 1
                     });
 
-                    Console.WriteLine(exchangeRate.DovizId + forexBuying + forexSelling + "Yenisi Eklendi");
+                    _logger.LogInformation($"4.Database {currencyCode} Kuru Düzeltildi");
                 }
                 else
                 {
-                    Console.WriteLine("Fiyatlar aynı sorun yok ");
+                    _logger.LogInformation($"4.Database {currencyCode} Kur Fiyatında Farklılık Yok");
                 }
 
             }
