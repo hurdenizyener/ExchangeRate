@@ -1,10 +1,10 @@
 ﻿using Entities.Common;
 
-namespace Entities.Entities
+namespace Entities.Dtos
 {
-    public class ExchangeRate : IEntity
+    public class ExchangeRateDto :IDto
     {
-        public DateTime Tarih { get; set; } 
+        public DateTime Tarih { get; set; }
         public string DovizId { get; set; }
         public decimal AlisFiati { get; set; }
         public decimal SatisFiati { get; set; }
@@ -16,7 +16,7 @@ namespace Entities.Entities
         public DateTime? InsertTarihi { get; set; }
         public int? KullaniciId { get; set; }
         public DateTime? DegisimTarihi { get; set; }
-
-        public Exchange Exchange { get; set; }
     }
+
+
 }

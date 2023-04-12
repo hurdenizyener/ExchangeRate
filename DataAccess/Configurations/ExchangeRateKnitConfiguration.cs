@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DataAccess.Configurations
 {
-    public class ExchangeRateConfiguration : IEntityTypeConfiguration<ExchangeRate>
+    public class ExchangeRateKnitConfiguration : IEntityTypeConfiguration<ExchangeRateKnit>
     {
-        public void Configure(EntityTypeBuilder<ExchangeRate> builder)
+        public void Configure(EntityTypeBuilder<ExchangeRateKnit> builder)
         {
             builder
                 .ToTable("DOVIZKURU")
@@ -45,25 +45,9 @@ namespace DataAccess.Configurations
                 .HasColumnName("EFEKTIFSATISFIATI");
 
             builder
-                .Property(p => p.InsertKullaniciId)
-                .HasColumnName("INSERTKULLANICIID");
-
-            builder
-                .Property(p => p.InsertTarihi)
-                .HasColumnName("INSERTTARIHI");
-
-            builder
-                .Property(p => p.KullaniciId)
-                .HasColumnName("KULLANICIID");
-
-            builder
-                .Property(p => p.DegisimTarihi)
-                .HasColumnName("DEGISIMTARIHI");
-
-            builder
                 .HasOne(p => p.Exchange)
                 .WithMany()
-                //.WithMany(a => a.ExchangeRates)
+              //  .WithMany(a => a.ExchangeRateKnits)
                 .HasForeignKey(p => p.DovizId);
 
         }

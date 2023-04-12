@@ -4,7 +4,7 @@ using Entities.Entities;
 
 namespace DataAccess.Repositories.Abstract
 {
-    public interface IFifthExchangeRateRepository : IAsyncRepository<ExchangeRate,ExchangeRateDto>
+    public interface IFirstExchangeRateKnitRepository : IAsyncRepository<ExchangeRateKnit, ExchangeRateKnitDto>
     {
     }
 }

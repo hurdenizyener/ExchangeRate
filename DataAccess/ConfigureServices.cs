@@ -4,6 +4,7 @@ using DataAccess.Repositories.Concrete;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace DataAccess
 {
@@ -19,6 +20,7 @@ namespace DataAccess
             services.AddDbContext<FifthDbContext>(options => options.UseFirebird(configuration.GetConnectionString("FifthConnectionString")));
 
             services.AddTransient<IFirstExchangeRateRepository, FirstExchangeRateRepository>();
+            services.AddTransient<IFirstExchangeRateKnitRepository, FirstExchangeRateKnitRepository>();
             services.AddTransient<IFirstExchangeRepository, FirstExchangeRepository>();
             services.AddTransient<ISecondExchangeRateRepository, SecondExchangeRateRepository>();
             services.AddTransient<ISecondExchangeRepository, SecondExchangeRepository>();
@@ -28,7 +30,10 @@ namespace DataAccess
             services.AddTransient<IFourthExchangeRepository, FourthExchangeRepository>();
             services.AddTransient<IFifthExchangeRateRepository, FifthExchangeRateRepository>();
             services.AddTransient<IFifthExchangeRepository, FifthExchangeRepository>();
-     
+
+
+            services.AddAutoMapper(Assembly.GetExecutingAssembly());
+
             return services;
         }
     }

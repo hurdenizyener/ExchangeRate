@@ -1,9 +1,10 @@
 ﻿using DataAccess.Repositories.GenericRepositories;
+using Entities.Dtos;
 using Entities.Entities;
 
 namespace DataAccess.Repositories.Abstract
 {
-    public interface IThirdExchangeRepository : IAsyncRepository<Exchange>
+    public interface IThirdExchangeRepository : IAsyncRepository<Exchange, ExchangeDto>
     {
     }
 }

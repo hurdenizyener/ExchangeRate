@@ -8,8 +8,10 @@ namespace DataAccess.Contexts
     public class FirstDbContext : DbContext
     {
         protected IConfiguration Configuration { get; set; }
-        public DbSet<ExchangeRate> DOVIZKURU { get; set; }
-        public DbSet<Exchange> DOVIZ { get; set; }
+        public DbSet<Exchange> Exchange { get; set; }
+        public DbSet<ExchangeRate> ExchangeRate { get; set; }
+        public DbSet<ExchangeRateKnit> ExchangeRateKnit { get; set; }
+       
 
         public FirstDbContext(DbContextOptions<FirstDbContext> dbContextOptions, IConfiguration configuration) : base(dbContextOptions)
         {

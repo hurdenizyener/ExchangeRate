@@ -8,11 +8,11 @@ using Microsoft.Extensions.Logging;
 
 namespace DataAccess.Repositories.Concrete
 {
-    public class SecondExchangeRateRepository : EfRepositoryBase<ExchangeRate,ExchangeRateDto, SecondDbContext>, ISecondExchangeRateRepository
+    public class FirstExchangeRateKnitRepository : EfRepositoryBase<ExchangeRateKnit, ExchangeRateKnitDto, FirstDbContext>, IFirstExchangeRateKnitRepository
     {
-        private readonly ILogger<SecondExchangeRateRepository> _logger;
+        private readonly ILogger<FirstExchangeRateKnitRepository> _logger;
         private readonly IMapper _mapper;
-        public SecondExchangeRateRepository(SecondDbContext context, ILogger<SecondExchangeRateRepository> logger, IMapper mapper) : base(context, logger, mapper)
+        public FirstExchangeRateKnitRepository(FirstDbContext context, ILogger<FirstExchangeRateKnitRepository> logger, IMapper mapper) : base(context, logger, mapper)
         {
             _logger = logger;
             _mapper = mapper;

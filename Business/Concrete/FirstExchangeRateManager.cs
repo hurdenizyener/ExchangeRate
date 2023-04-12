@@ -1,5 +1,6 @@
 ﻿using Business.Abstract;
 using DataAccess.Repositories.Abstract;
+using Entities.Dtos;
 using Entities.Entities;
 using Microsoft.Extensions.Logging;
 using System.Xml.Linq;
@@ -12,18 +13,20 @@ namespace Business.Concrete
         private readonly ILogger<FirstExchangeRateManager> _logger;
         private readonly HttpClient _httpClient;
         private readonly IFirstExchangeRateRepository _firstExchangeRateRepository;
+        private readonly IFirstExchangeRateKnitRepository _firstExchangeRateKnitRepository;
         private readonly IFirstExchangeRepository _firstExchangeRepository;
         private readonly DateTime date = DateTime.Now.Date;
         private string currencyCode;
         private decimal forexBuying, forexSelling, banknoteBuying, banknoteSelling;
 
 
-        public FirstExchangeRateManager(HttpClient httpClient, IFirstExchangeRateRepository firstExchangeRateRepository, IFirstExchangeRepository exchangeRepository, ILogger<FirstExchangeRateManager> logger)
+        public FirstExchangeRateManager(HttpClient httpClient, IFirstExchangeRateRepository firstExchangeRateRepository, IFirstExchangeRepository exchangeRepository, ILogger<FirstExchangeRateManager> logger, IFirstExchangeRateKnitRepository firstExchangeRateKnitRepository)
         {
             _httpClient = httpClient;
             _firstExchangeRateRepository = firstExchangeRateRepository;
             _firstExchangeRepository = exchangeRepository;
             _logger = logger;
+            _firstExchangeRateKnitRepository = firstExchangeRateKnitRepository;
         }
 
         public async Task GetExchangeRateFromTCMB(string path)
@@ -43,7 +46,7 @@ namespace Business.Concrete
                 response.EnsureSuccessStatusCode();
                 var content = await response.Content.ReadAsStringAsync();
                 var document = XDocument.Parse(content);
-                List<Exchange> exchange = await _firstExchangeRepository.GetAllAsync();
+                List<ExchangeDto> exchange = await _firstExchangeRepository.GetAllAsync();
 
                 if (exchange.Count > 0)
                 {
@@ -63,10 +66,11 @@ namespace Business.Concrete
                 foreach (var currency in exchange)
                 {
 
-                    var countExchangeRateByDate = await _firstExchangeRateRepository.GetAllAsync(p => p.Tarih == date && p.DovizId == currency.DovizId);
+                    List<ExchangeRateDto> countExchangeRateByDate = await _firstExchangeRateRepository.GetAllAsync(p => p.Tarih == date && p.DovizId == currency.DovizId);
+                 //   var countExchangeRateByDate = await _firstExchangeRateRepository.GetAllAsync();
 
 
-                    if (countExchangeRateByDate.Count() > 0)
+                    if (countExchangeRateByDate.Count() > 0 )
                     {
 
                         switch (currency.DovizId)
@@ -118,21 +122,21 @@ namespace Business.Concrete
             if (currency is "TL")
             {
 
-                await _firstExchangeRateRepository.AddAsync(new ExchangeRate()
-                {
-                    DovizId = currency,
-                    Tarih = DateTime.Now.Date,
-                    AlisFiati = 1,
-                    SatisFiati = 1,
-                    EfektifAlisFiati = 1,
-                    EfektifSatisFiati = 1,
-                    SerbestAlisFiati = 0,
-                    SerbestSatisFiati = 0,
-                    DegisimTarihi = DateTime.Now,
-                    InsertTarihi = DateTime.Now,
-                    InsertKullaniciId = 1,
-                    KullaniciId = 1
-                });
+                //await _firstExchangeRateRepository.AddAsync(new ExchangeRateDto()
+                //{
+                //    DovizId = currency,
+                //    Tarih = DateTime.Now.Date,
+                //    AlisFiati = 1,
+                //    SatisFiati = 1,
+                //    EfektifAlisFiati = 1,
+                //    EfektifSatisFiati = 1,
+                //    SerbestAlisFiati = 0,
+                //    SerbestSatisFiati = 0,
+                //    DegisimTarihi = DateTime.Now,
+                //    InsertTarihi = DateTime.Now,
+                //    InsertKullaniciId = 1,
+                //    KullaniciId = 1
+                //});
             }
             else
             {
@@ -147,7 +151,7 @@ namespace Business.Concrete
 
                 currencyCode = currency is "EUR" ? "EURO" : currency;
 
-                await _firstExchangeRateRepository.AddAsync(new ExchangeRate()
+                await _firstExchangeRateRepository.AddAsync(new ExchangeRateDto()
                 {
                     DovizId = currencyCode,
                     Tarih = DateTime.Now.Date,
@@ -163,6 +167,21 @@ namespace Business.Concrete
                     KullaniciId = 1
                 });
 
+                //await _firstExchangeRateKnitRepository.AddAsync(new ExchangeRateKnitDto()
+                //{
+                //    DovizId = currencyCode,
+                //    Tarih = DateTime.Now.Date,
+                //    AlisFiati = forexBuying,
+                //    SatisFiati = forexSelling,
+                //    EfektifAlisFiati = banknoteBuying,
+                //    EfektifSatisFiati = banknoteSelling,
+                //    SerbestAlisFiati = 0,
+                //    SerbestSatisFiati = 0
+
+                //});
+
+
+
                 _logger.LogInformation($"1.Database {currencyCode} Kuru Eklendi. Alış Fiyatı: {forexBuying} , Satış Fiyatı: {forexSelling}");
 
             }
@@ -174,7 +193,7 @@ namespace Business.Concrete
 
             _logger.LogInformation($"1.Databese {currencyCode} Döviz Kontrolü Yapılıyor.");
 
-            ExchangeRate exchangeRate = await _firstExchangeRateRepository.GetAsync(p => p.Tarih == date && p.DovizId == currencyCode);
+            ExchangeRateDto exchangeRate = await _firstExchangeRateRepository.GetAsync(p => p.Tarih == date && p.DovizId == currencyCode);
             var node = document.Descendants("Currency").FirstOrDefault(x => x.Attribute("CurrencyCode").Value == currency);
             forexBuying = decimal.Parse(node.Element("ForexBuying").Value.Replace(".", ","));
             forexSelling = decimal.Parse(node.Element("ForexSelling").Value.Replace(".", ","));
@@ -196,7 +215,7 @@ namespace Business.Concrete
 
                     await _firstExchangeRateRepository.DeleteAsync(exchangeRate);
                    
-                    await _firstExchangeRateRepository.AddAsync(new ExchangeRate()
+                    await _firstExchangeRateRepository.AddAsync(new ExchangeRateDto()
                     {
                         DovizId = exchangeRate.DovizId,
                         Tarih = exchangeRate.Tarih,
